@@ -6,6 +6,16 @@ package require json
 set PORT 4001
 set WSGUID 258EAFA5-E914-47DA-95CA-C5AB0DC85B11
 
+set verbose no
+set debug no
+
+foreach opt $::argv {
+  switch $opt {
+    -v {set verbose yes}
+    -d {set debug yes}
+  }
+}
+
 proc vim-send {name msg} { exec vim --servername $name --remote-send $msg }
 proc vim-expr {name expr} { exec vim --servername $name --remote-expr $expr }
 
@@ -64,7 +74,9 @@ proc onclose {chan} {
   }
 
   every cancel [list refresh $chan]
+  lassign [chan configure $chan -peername] addr host port
   close $chan
+  if {$::verbose} { puts "WebSocket $addr:$port disconnected." }
 
   if {[catch {
     vim-send $chan {:q!<CR>}
@@ -89,7 +101,7 @@ proc refresh {chan {change {}}} {
     onclose $chan
     return end
   } elseif {$nchange != $change} {
-    puts "Update detected, sending..."
+    if {$::verbose} { puts "Update detected, sending..." }
     set change $nchange
     # json package doesn't do escaping of special characters in strings
     set buf [stringify [list text [regsub -all {\n} $buf {\n}]]]
@@ -137,7 +149,9 @@ proc onmessage {chan} {
       # rfc6455 5.1 ... A client MUST mask all frames
       if {$masked} {binary scan [read $chan 4] i mask} {onclose $chan; return}
       if {$len < 0} {set len [expr {65536 + $len}]}
-      # puts "FLAGS:$flags OPCODE:$opcode MASKED:$masked LEN:$len MASK:$mask"
+      if {$::debug} {
+        puts "FLAGS:$flags OPCODE:$opcode MASKED:$masked LEN:$len MASK:$mask"
+      }
 
       set payload [xor [read $chan $len] $mask]
       # puts $payload
@@ -191,7 +205,7 @@ proc sl {chan {msg {}}} {
 proc accept {chan addr port} {
   global PORT WSGUID
   fconfigure $chan -translation crlf
-  while 1 {
+  while {![eof $chan]} {
     set l [string trim [gets $chan]]
     if {[string equal $l ""]} break
     set h [lindex $l 0]
@@ -200,7 +214,8 @@ proc accept {chan addr port} {
   }
 
   if {[info exists rq(Upgrade:)] && [string equal websocket $rq(Upgrade:)]} {
-    # puts "Websocket [array get rq Sec-*]"
+    if {$::verbose} { puts "WebSocket $addr:$port connected." }
+    if {$::debug} { puts "WebSocket [array get rq Sec-*]" }
     sl $chan "HTTP/1.1 101 Switching Protocols"
     sl $chan "Date: [clock format [clock seconds] -format {%a, %d %h %Y %T %Z} -timezone GMT]"
     sl $chan "Server: ..."
@@ -219,6 +234,7 @@ proc accept {chan addr port} {
 
     fileevent $chan readable [list onmessage $chan]
   } else {
+    if {$::verbose} { puts "HTTP $addr:$port connected." }
     # don't know why we do this extra request, just keep using the same port.
     set payload [subst {{"WebSocketPort":$PORT,"ProtocolVersion":1}}]
     sl $chan "HTTP/1.1 200 Ok"
@@ -231,8 +247,10 @@ proc accept {chan addr port} {
     sl $chan $payload
     sl $chan
     close $chan
+    if {$::verbose} { puts "HTTP $addr:$port disconnected." }
   }
 }
 
-socket -server accept -myaddr localhost $PORT
+if {$::verbose} { puts "Listening on $PORT"; }
+socket -server accept $PORT; # -myaddr localhost $PORT
 vwait quit
