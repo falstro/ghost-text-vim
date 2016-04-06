@@ -252,5 +252,5 @@ proc accept {chan addr port} {
 }
 
 if {$::verbose} { puts "Listening on $PORT"; }
-socket -server accept $PORT; # -myaddr localhost $PORT
+socket -server accept -myaddr localhost $PORT
 vwait quit
