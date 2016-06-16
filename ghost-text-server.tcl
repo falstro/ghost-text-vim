@@ -16,8 +16,8 @@ foreach opt $::argv {
   }
 }
 
-proc vim-send {name msg} { exec vim --servername $name --remote-send $msg }
-proc vim-expr {name expr} { exec vim --servername $name --remote-expr $expr }
+proc vim-send {name msg} { exec gvim --servername $name --remote-send $msg }
+proc vim-expr {name expr} { exec gvim --servername $name --remote-expr $expr }
 
 proc vim-launch {name} {
     exec gvim --servername $name &
