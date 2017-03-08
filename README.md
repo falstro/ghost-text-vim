@@ -3,7 +3,9 @@
 A small server script allowing you to use GVIm with Ghost Text Chrome
 (or Firefox) extension. It's a standalone script, and will launch new
 instances of GVIm each time. It's implemented in TCL because, reasons,
-and requires TCL version at least 8.6.
+and requires TCL version at least 8.6. It also requires sha1, json, and
+json::write. On Debian and Ubuntu these are available in the tcllib
+package.
 
 The integration from VIm to Chrome is fairly robust, and will update on
 each change as soon as you get back to normal mode. In the other
