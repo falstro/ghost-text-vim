@@ -2,6 +2,7 @@
 
 package require sha1
 package require json
+package require json::write
 
 set PORT 4001
 set WSGUID 258EAFA5-E914-47DA-95CA-C5AB0DC85B11
@@ -40,7 +41,7 @@ proc xor {payload mask} {
 
 proc stringify {dictVal} {
   foreach {k v} $dictVal {
-    lappend a "\"$k\":[json::string2json $v]"
+    lappend a "[json::write::string $k]:[json::write::string $v]"
   }
   return [list [join $a ,]]
 }
@@ -102,9 +103,9 @@ proc refresh {chan {change {}}} {
     return end
   } elseif {$nchange != $change} {
     if {$::verbose} { puts "Update detected, sending..." }
+    if {$::debug} { puts "Sending: $buf" }
     set change $nchange
-    # json package doesn't do escaping of special characters in strings
-    set buf [stringify [list text [regsub -all {\n} $buf {\n}]]]
+    set buf [stringify [list text $buf]]
     set len [string length $buf]
     if {$len >= 65536} {
       set blen [binary format cII 127 0 $len]
