@@ -21,7 +21,7 @@ proc vim-send {name msg} { exec gvim --servername $name --remote-send $msg }
 proc vim-expr {name expr} { exec gvim --servername $name --remote-expr $expr }
 
 proc vim-launch {name} {
-    exec gvim --servername $name &
+    exec gvim -c "set buftype=nofile" -c "set bufhidden=hide" -c "set noswapfile" --servername $name &
 
     while {[incr attempts] < 10 && [catch {vim-expr $chan changenr()}]} {
       after 250
