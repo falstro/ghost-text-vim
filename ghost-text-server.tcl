@@ -15,10 +15,10 @@ set verbose no
 set debug no
 
 set options {
-    {v          "Enable verbose output"}
-    {d          "Enable debug output"}
-    {L.arg  "gvim"  "Use this command to launch vim"}
-    {R.arg  "gvim"  "Use this command for remote commands"}
+  {v          "Enable verbose output"}
+  {d          "Enable debug output"}
+  {L.arg  "gvim"  "Use this command to launch vim"}
+  {R.arg  "gvim"  "Use this command for remote commands"}
 }
 
 try {
@@ -34,13 +34,16 @@ try {
 
 proc vim-send {name msg} { exec $::remote --servername $name --remote-send $msg }
 proc vim-expr {name expr} { exec $::remote --servername $name --remote-expr $expr }
-
 proc vim-launch {name} {
-    exec $::launcher -c "set buftype=nofile" -c "set bufhidden=hide" -c "set noswapfile" --servername $name &
+  exec $::launcher -c "set buftype=nofile" -c "set bufhidden=hide" -c "set noswapfile" --servername $name &
+}
 
-    while {[incr attempts] < 10 && [catch {vim-expr $chan changenr()}]} {
-      after 250
-    }
+proc launch-editor {name} {
+  vim-launch $name
+
+  while {[incr attempts] < 10 && [catch {vim-expr $name changenr()}]} {
+    after 250
+  }
 }
 
 set quit 0
@@ -271,7 +274,7 @@ proc accept {chan addr port} {
     flush $chan
     fconfigure $chan -translation binary -blocking 0
 
-    vim-launch $chan
+    launch-editor $chan
 
     fileevent $chan readable [list onmessage $chan]
   } else {
