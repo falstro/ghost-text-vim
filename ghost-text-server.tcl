@@ -1,5 +1,9 @@
 #!/usr/bin/tclsh
 
+package require Tcl 8.6
+package require try
+package require cmdline 1.5
+
 package require sha1
 package require json
 package require json::write
@@ -10,18 +14,29 @@ set WSGUID 258EAFA5-E914-47DA-95CA-C5AB0DC85B11
 set verbose no
 set debug no
 
-foreach opt $::argv {
-  switch $opt {
-    -v {set verbose yes}
-    -d {set debug yes}
-  }
+set options {
+    {v          "Enable verbose output"}
+    {d          "Enable debug output"}
+    {L.arg  "gvim"  "Use this command to launch vim"}
+    {R.arg  "gvim"  "Use this command for remote commands"}
 }
 
-proc vim-send {name msg} { exec gvim --servername $name --remote-send $msg }
-proc vim-expr {name expr} { exec gvim --servername $name --remote-expr $expr }
+try {
+  array set params [::cmdline::getoptions argv $options]
+  set verbose $params(v)
+  set debug $params(d)
+  set remote $params(R)
+  set launcher $params(L)
+} trap {CMDLINE USAGE} {msg o} {
+  puts $msg
+  exit 1
+}
+
+proc vim-send {name msg} { exec $::remote --servername $name --remote-send $msg }
+proc vim-expr {name expr} { exec $::remote --servername $name --remote-expr $expr }
 
 proc vim-launch {name} {
-    exec gvim -c "set buftype=nofile" -c "set bufhidden=hide" -c "set noswapfile" --servername $name &
+    exec $::launcher -c "set buftype=nofile" -c "set bufhidden=hide" -c "set noswapfile" --servername $name &
 
     while {[incr attempts] < 10 && [catch {vim-expr $chan changenr()}]} {
       after 250
