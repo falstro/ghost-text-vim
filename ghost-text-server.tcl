@@ -69,15 +69,24 @@ proc send {chan packet} {
 }
 
 proc onclose {chan} {
-  if {![eof $chan]} {
-    set packet [binary format H2c 88 0]; # fin, close, zero unmasked length
-    send $chan $packet
+  if {$::debug} { puts "onclose $chan" }
+  if {[catch {
+    if {![eof $chan]} {
+      set packet [binary format H2c 88 0]; # fin, close, zero unmasked length
+      send $chan $packet
+    }
+  } exc]} {
+    puts "Exception sending 'close': $exc"
   }
 
   every cancel [list refresh $chan]
-  lassign [chan configure $chan -peername] addr host port
+  if {$::verbose} {
+    set addr "unknown"
+    set port "0"
+    catch { lassign [chan configure $chan -peername] addr host port }
+    puts "WebSocket $addr:$port disconnected."
+  }
   close $chan
-  if {$::verbose} { puts "WebSocket $addr:$port disconnected." }
 
   if {[catch {
     vim-send $chan {:q!<CR>}
@@ -85,6 +94,16 @@ proc onclose {chan} {
     puts "Exception while closing VIm: $exc"
   }
 }
+
+# http://wiki.tcl.tk/515
+proc u2a {s} {
+  set res ""
+  foreach i [split $s ""] {
+      scan $i %c c
+      if {$c<128} {append res $i} else {append res \\u[format %04.4x $c]}
+  }
+  set res
+} ;#RS
 
 proc refresh {chan {change {}}} {
   if {[catch {
@@ -103,10 +122,9 @@ proc refresh {chan {change {}}} {
     return end
   } elseif {$nchange != $change} {
     if {$::verbose} { puts "Update detected, sending..." }
-    if {$::debug} { puts "Sending: $buf" }
     set change $nchange
-    set buf [stringify [list text $buf]]
-    set len [string length $buf]
+    set buf [u2a [stringify [list text $buf]]]
+    set len [string bytelength $buf]
     if {$len >= 65536} {
       set blen [binary format cII 127 0 $len]
     } elseif {$len >= 126} {
@@ -114,8 +132,8 @@ proc refresh {chan {change {}}} {
     } else {
       set blen [binary format c $len]
     }
-    # puts "sending $buf"
     # rfc6455 5.1 ... A server MUST NOT mask any frames
+    if {$::debug} { puts "Sending: $len $buf" }
     set packet "[binary format H2 81]$blen$buf"
     send $chan $packet
     flush $chan
@@ -128,6 +146,9 @@ proc onmessage {chan} {
     if {[eof $chan]} {
       onclose $chan
     } else {
+      set mask ""
+      set masked 0
+      set len 0
       set preamble [read $chan 1]
       set masklen [read $chan 1]
       binary scan $preamble b4 flags
@@ -160,6 +181,8 @@ proc onmessage {chan} {
       switch $opcode {
         1 {
           # text
+          set payload [encoding convertfrom utf-8 $payload]
+          if {$::debug} { puts "received text frame: $payload" }
           set msg [json::json2dict $payload]
           set txt "\[\"[join [lmap x [split [dict get $msg text] "\n"] {set x [regsub -all "\"" $x {\"}]}] {","}]\"\]"
           lassign [vim-expr $chan getcurpos()] bnum lnum col
