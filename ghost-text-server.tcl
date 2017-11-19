@@ -80,7 +80,7 @@ proc onclose {chan} {
   if {$::verbose} { puts "WebSocket $addr:$port disconnected." }
 
   if {[catch {
-    vim-send $chan {:q!<CR>}
+    vim-send $chan {:q<CR>}
   } exc]} {
     puts "Exception while closing VIm: $exc"
   }
