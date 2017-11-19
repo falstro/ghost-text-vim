@@ -193,6 +193,8 @@ proc onmessage {chan} {
           # there's always one empty line after deleting them all, remove it.
           vim-send $chan {:$d _<CR>}
           vim-expr $chan "cursor($lnum,$col)"
+          # enable file type detection
+          vim-send $chan {:filetype detect<CR>}
 
           every 1000 [list refresh $chan] [vim-expr $chan changenr()]
         }
