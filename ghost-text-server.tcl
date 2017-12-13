@@ -32,9 +32,16 @@ try {
   exit 1
 }
 
-proc vim-send {name msg} { exec $::remote --servername $name --remote-send $msg }
-proc vim-expr {name expr} { exec $::remote --servername $name --remote-expr $expr }
+proc vim-send {name msg} {
+  if {$::debug} { puts "vim-send $name $msg" }
+  exec $::remote --servername $name --remote-send $msg
+}
+proc vim-expr {name expr} {
+  if {$::debug} { puts "vim-expr $name $expr" }
+  exec $::remote --servername $name --remote-expr $expr
+}
 proc vim-launch {name} {
+  if {$::debug} { puts "vim-launch $name" }
   exec $::launcher -c "set buftype=nofile" -c "set bufhidden=hide" -c "set noswapfile" --servername $name &
 }
 
