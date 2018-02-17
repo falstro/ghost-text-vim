@@ -203,7 +203,7 @@ proc onmessage {chan} {
           if {$::debug} { puts "received text frame: $payload" }
           set msg [json::json2dict $payload]
           set txt "\[\"[join [lmap x [split [dict get $msg text] "\n"] {set x [regsub -all "\"" $x {\"}]}] {","}]\"\]"
-          lassign [vim-expr $chan getcurpos()] bnum lnum col
+          lassign [vim-expr $chan getpos('.')] bnum lnum col
           # tcl can't have '<' at the begging of an exec-parameter, so
           # we can't send <ESC> first...
           vim-send $chan {:%d _<CR>}
