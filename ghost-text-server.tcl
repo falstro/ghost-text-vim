@@ -65,10 +65,12 @@ proc xor {payload mask} {
 }
 
 proc stringify {dictVal} {
+  puts $dictVal
   foreach {k v} $dictVal {
     lappend a "[json::write::string $k]:[json::write::string $v]"
   }
-  return [list [join $a ,]]
+  puts $a
+  return "{[join $a ,]}"
 }
 
 proc every {ms body {last {}}} {
