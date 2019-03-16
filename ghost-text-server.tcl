@@ -65,11 +65,9 @@ proc xor {payload mask} {
 }
 
 proc stringify {dictVal} {
-  puts $dictVal
   foreach {k v} $dictVal {
     lappend a "[json::write::string $k]:[json::write::string $v]"
   }
-  puts $a
   return "{[join $a ,]}"
 }
 
@@ -211,7 +209,12 @@ proc onmessage {chan} {
           set payload [encoding convertfrom utf-8 $payload]
           if {$::debug} { puts "received text frame: $payload" }
           set msg [json::json2dict $payload]
-          set txt "\[\"[join [lmap x [split [dict get $msg text] "\n"] {set x [regsub -all "\"" $x {\"}]}] {","}]\"\]"
+          set escaped [string map {
+            "\\" "\\\\"
+            "\"" "\\\""
+          } $msg]
+          set lines [split [dict get $escaped text] "\n"]
+          set txt "\[\"[join $lines {","}]\"\]"
           lassign [vim-expr $chan getpos('.')] bnum lnum col
           # tcl can't have '<' at the begging of an exec-parameter, so
           # we can't send <ESC> first...
