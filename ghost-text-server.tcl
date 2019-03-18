@@ -209,12 +209,12 @@ proc onmessage {chan} {
           set payload [encoding convertfrom utf-8 $payload]
           if {$::debug} { puts "received text frame: $payload" }
           set msg [json::json2dict $payload]
+          set lines [dict get $msg text]
           set escaped [string map {
             "\\" "\\\\"
             "\"" "\\\""
-          } $msg]
-          set lines [split [dict get $escaped text] "\n"]
-          set txt "\[\"[join $lines {","}]\"\]"
+          } $lines]
+          set txt "\[\"[join [split $escaped "\n"] {","}]\"\]"
           lassign [vim-expr $chan getpos('.')] bnum lnum col
           # tcl can't have '<' at the begging of an exec-parameter, so
           # we can't send <ESC> first...
